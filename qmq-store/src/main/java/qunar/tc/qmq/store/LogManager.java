@@ -49,6 +49,7 @@ public class LogManager {
         this.fileSize = fileSize;
         this.segmentValidator = segmentValidator;
         createAndValidateLogDir();
+        //TODO
         loadLogs();
         recover();
     }

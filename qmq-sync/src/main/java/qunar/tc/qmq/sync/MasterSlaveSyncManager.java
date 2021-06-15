@@ -94,6 +94,7 @@ public class MasterSlaveSyncManager implements Disposable {
         private void doSync() {
             Datagram response = null;
             try {
+                //同步log
                 response = slaveSyncClient.syncLog(processor.getRequest());
                 processor.process(response);
             } finally {

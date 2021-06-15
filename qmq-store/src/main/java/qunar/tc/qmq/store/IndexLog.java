@@ -37,7 +37,7 @@ public class IndexLog implements AutoCloseable, Visitable<MessageQueryIndex> {
     private static final int PER_SEGMENT_FILE_SIZE = 1024 * 1024 * 1024;
 
     private final LogManager logManager;
-    private final CheckpointManager indexCheckpointManager;
+    private final CheckpointManager indexCheckpointManager;//TODO what is checkpoint
 
     private final PeriodicFlushService indexCommittedCheckpointFlusher;
 
@@ -47,6 +47,7 @@ public class IndexLog implements AutoCloseable, Visitable<MessageQueryIndex> {
 
         Preconditions.checkNotNull(iterateCheckpointManagers, "iterateCheckpointManagers should not be null!");
 
+        //指定logfile的存储路径以及每个文件的大小
         this.logManager = new LogManager(new File(config.getIndexLogStorePath()), PER_SEGMENT_FILE_SIZE,
                 new MaxSequenceLogSegmentValidator(indexCheckpointManager.getIndexCheckpointIndexOffset()));
         this.indexCheckpointManager = indexCheckpointManager;
@@ -116,6 +117,7 @@ public class IndexLog implements AutoCloseable, Visitable<MessageQueryIndex> {
         int currentPos = segment.getWrotePosition();
         final int freeSize = segment.getFileSize() - currentPos;
         if (data.remaining() <= freeSize) {
+            //添加数据到segment
             if (!segment.appendData(data)) throw new RuntimeException("append index data failed.");
             return new AppendMessageResult<>(SUCCESS, segment.getBaseOffset() + segment.getWrotePosition());
         }

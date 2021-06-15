@@ -45,6 +45,7 @@ public class LogIterateService<T> implements AutoCloseable {
         this.dispatcherPauseMills = dispatcherPauseMills;
         this.visitable = visitable;
         this.dispatcher = dispatcher;
+        //创建线程
         this.dispatcherThread = new Thread(new Dispatcher());
         this.dispatcherThread.setName(name);
         this.iterateFrom = new LongAdder();
@@ -64,6 +65,7 @@ public class LogIterateService<T> implements AutoCloseable {
     }
 
     public void start() {
+        //启动dispatcher线程
         dispatcherThread.start();
     }
 
@@ -100,6 +102,7 @@ public class LogIterateService<T> implements AutoCloseable {
         public void run() {
             while (!stop) {
                 try {
+                    //核心
                     processLog();
                 } catch (Throwable e) {
                     QMon.replayLogFailedCountInc(name + "Failed");

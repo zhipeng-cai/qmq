@@ -57,7 +57,7 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
         this.config = config.getDynamicConfig();
         this.skipBackSubjects = DynamicConfigLoader.load("skip_backup.properties", false);
     }
-
+    //TODO 两个变量含义
     private void saveIndex(List<MessageQueryIndex> indices, Consumer<MessageQueryIndex> fi) {
         int size = indices.size();
         byte[][] keys = new byte[size][];
@@ -78,10 +78,12 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
                     subjectKey = RetrySubjectUtils.buildRetrySubject(realSubject);
                     consumerGroup = RetrySubjectUtils.getConsumerGroup(subject);
                 }
+                //生成rowkey
                 final byte[] key = keyGenerator.generateMessageKey(subjectKey, new Date(index.getCreateTime()), index.getMessageId(), brokerGroup, consumerGroup, index.getSequence());
                 final String messageId = index.getMessageId();
                 final byte[] messageIdBytes = Bytes.UTF8(messageId);
 
+                //填充value的值
                 final byte[] value = new byte[20 + brokerGroupLength + messageIdBytes.length];
                 Bytes.setLong(value, index.getSequence(), 0);
                 Bytes.setLong(value, index.getCreateTime(), 8);
@@ -92,6 +94,7 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
                 keys[i] = key;
                 values[i] = new byte[][]{value};
 
+                //TODO tailIndex??
                 if (tailIndex == null || tailIndex.compareTo(index) < 0) tailIndex = index;
             } catch (Exception e) {
                 LOGGER.error("batch backup message index failed.", e);
@@ -148,6 +151,7 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
     protected void store(List<MessageQueryIndex> batch, Consumer<MessageQueryIndex> fi) {
         long currentTime = System.currentTimeMillis();
         try {
+            //在store()方法中调用了saveIndex()
             saveIndex(batch, fi);
         } catch (Exception e) {
             LOGGER.error("backup message index error", e);

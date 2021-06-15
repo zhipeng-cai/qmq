@@ -136,7 +136,7 @@ public abstract class AbstractBatchBackup<T> implements BatchBackup<T> {
 
     protected abstract void doStop();
 
-    protected abstract void store(List<T> batch, Consumer<T> fi);
+    protected abstract void store(List<T> batch, Consumer<T> fi);//这个方法备份数据到hbase中
 
     protected abstract int getBatchSize();
 }

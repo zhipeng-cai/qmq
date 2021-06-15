@@ -106,18 +106,20 @@ public class ServerWrapper implements Disposable {
         BrokerRole role = BrokerConfig.getBrokerRole();
         if (role != BrokerRole.BACKUP) throw new RuntimeException("Only support backup");
 
+        //TODO 从slave备份数据过来？？？
         final SlaveSyncClient slaveSyncClient = new SlaveSyncClient(config);
         final MasterSlaveSyncManager masterSlaveSyncManager = new MasterSlaveSyncManager(slaveSyncClient);
 
         StorageConfig storageConfig = dummyConfig(config);
         StorageConfig deadStorageConfig = dummyConfig(deadConfig);
 
-
+        //TODO what
         final CheckpointManager checkpointManager = new CheckpointManager(BrokerConfig.getBrokerRole(), storageConfig, null);
 
         final CheckpointManager deadCheckpointManager = new CheckpointManager(BrokerConfig.getBrokerRole(), deadStorageConfig, null);
 
         final BackupKeyGenerator keyGenerator = new BackupKeyGenerator(dicService);
+        //hbase表注册？？
         final KvStore.StoreFactory factory = new FactoryStoreImpl().createStoreFactory(config, dicService, keyGenerator);
         this.indexStore = factory.createMessageIndexStore();
         this.recordStore = factory.createRecordStore();
@@ -128,6 +130,7 @@ public class ServerWrapper implements Disposable {
 
         messageService = new MessageServiceImpl(config, indexStore, deadMessageStore, recordStore);
 
+        //TODO
         FixedExecOrderEventBus.Listener<MessageQueryIndex> indexProcessor = getConstructIndexListener(keyGenerator
                 , messageQueryIndex -> indexLog.commit(checkpointManager, messageQueryIndex.getCurrentOffset()));
 
@@ -135,6 +138,7 @@ public class ServerWrapper implements Disposable {
                 , messageQueryIndex -> indexLog.commit(deadCheckpointManager, messageQueryIndex.getCurrentOffset()));
 
         final FixedExecOrderEventBus bus = new FixedExecOrderEventBus();
+        //订阅的类型以及监听者
         bus.subscribe(MessageQueryIndex.class, indexProcessor);
 
         LogIterateService<MessageQueryIndex> iterateService = new LogIterateService<>("index", storageConfig.getLogDispatcherPauseMillis(), indexLog, checkpointManager.getIndexIterateCheckpoint(), bus);
@@ -146,6 +150,7 @@ public class ServerWrapper implements Disposable {
 
         LogIterateService<MessageQueryIndex> deadIterateService = new LogIterateService<>("dead-index", storageConfig.getLogDispatcherPauseMillis(), indexLog, deadCheckpointManager.getIndexIterateCheckpoint(), deadBus);
 
+        //注册processor，本地indexlog同步的processor,写数据到本地indexlog
         final IndexLogSyncDispatcher dispatcher = new IndexLogSyncDispatcher(indexLog);
         masterSlaveSyncManager.registerProcessor(dispatcher.getSyncType(), new BackupMessageLogSyncProcessor(dispatcher));
 
@@ -164,10 +169,10 @@ public class ServerWrapper implements Disposable {
 
 
         scheduleFlushManager.scheduleFlush();
-        backupManager.start();
+        backupManager.start();//将数据写入hbase？？ 每个batchbackup会启动，以一定频率执行？
         iterateService.start();
         deadIterateService.start();
-        masterSlaveSyncManager.startSync();
+        masterSlaveSyncManager.startSync();//启动线程同步数据到log
         addResourcesInOrder(scheduleFlushManager, backupManager, masterSlaveSyncManager);
     }
 
@@ -188,9 +193,9 @@ public class ServerWrapper implements Disposable {
     private FixedExecOrderEventBus.Listener<MessageQueryIndex> getConstructIndexListener(final BackupKeyGenerator keyGenerator, Consumer<MessageQueryIndex> consumer) {
 
         final BatchBackup<MessageQueryIndex> indexBackup = new MessageIndexBatchBackup(config, indexStore, keyGenerator);
-        backupManager.registerBatchBackup(indexBackup);
+        backupManager.registerBatchBackup(indexBackup);//将indexBackup这个"任务"注册到backupmanager中
 
-
+        //创建index的listener
         return new IndexEventBusListener(indexBackup, consumer);
     }
 
