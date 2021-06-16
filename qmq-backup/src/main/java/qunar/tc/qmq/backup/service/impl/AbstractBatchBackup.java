@@ -94,6 +94,7 @@ public abstract class AbstractBatchBackup<T> implements BatchBackup<T> {
     private List<T> tryCreateBatch(final T t) {
         batchGuard.lock();
         try {
+            //在这添加到batch
             batch.add(t);
             return getMinBatchOrNull(getBatchSize());
         } finally {

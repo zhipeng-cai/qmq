@@ -45,7 +45,7 @@ public class IndexEventBusListener extends AbstractEventBusListener {
             return;
         }
         // indexBatchBackup
-        // 添加需要备份到hbase的index数据？
+        // TODO 添加需要备份到hbase的index数据？
         indexBatchBackup.add(index, consumer);
     }
 

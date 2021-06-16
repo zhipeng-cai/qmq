@@ -113,7 +113,7 @@ public class ServerWrapper implements Disposable {
         StorageConfig storageConfig = dummyConfig(config);
         StorageConfig deadStorageConfig = dummyConfig(deadConfig);
 
-        //TODO what
+        //TODO
         final CheckpointManager checkpointManager = new CheckpointManager(BrokerConfig.getBrokerRole(), storageConfig, null);
 
         final CheckpointManager deadCheckpointManager = new CheckpointManager(BrokerConfig.getBrokerRole(), deadStorageConfig, null);
@@ -172,7 +172,7 @@ public class ServerWrapper implements Disposable {
         backupManager.start();//将数据写入hbase？？ 每个batchbackup会启动，以一定频率执行？
         iterateService.start();
         deadIterateService.start();
-        masterSlaveSyncManager.startSync();//启动线程同步数据到log
+        masterSlaveSyncManager.startSync();//启动线程同步数据到log,message log线程，action log线程
         addResourcesInOrder(scheduleFlushManager, backupManager, masterSlaveSyncManager);
     }
 

@@ -57,7 +57,8 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
         this.config = config.getDynamicConfig();
         this.skipBackSubjects = DynamicConfigLoader.load("skip_backup.properties", false);
     }
-    //TODO 两个变量含义
+    //TODO 两个变量含义 comumer好像是从serverwrapper中传过来的
+    //messageQueryIndex -> indexLog.commit(checkpointManager, messageQueryIndex.getCurrentOffset())
     private void saveIndex(List<MessageQueryIndex> indices, Consumer<MessageQueryIndex> fi) {
         int size = indices.size();
         byte[][] keys = new byte[size][];
@@ -103,6 +104,7 @@ public class MessageIndexBatchBackup extends AbstractBatchBackup<MessageQueryInd
             }
         }
         indexStore.batchSave(keys, values);
+        //TODO ??
         if (fi != null) fi.accept(tailIndex);
     }
 
