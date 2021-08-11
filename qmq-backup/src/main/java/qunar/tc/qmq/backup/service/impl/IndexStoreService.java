@@ -10,6 +10,8 @@ import qunar.tc.qmq.metrics.Metrics;
 import qunar.tc.qmq.store.MessageQueryIndex;
 import qunar.tc.qmq.utils.RetrySubjectUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static qunar.tc.qmq.metrics.MetricsConstants.SUBJECT_ARRAY;
@@ -26,12 +28,15 @@ public class IndexStoreService {
     private final DynamicConfig skipBackSubjects;
     private final String brokerGroup;
     private final IndexDbDao indexDbDao;
+    private final int batchSize;
     private MessageQueryIndex lastIndex;
+    private List<MessageQueryIndex> batch = new ArrayList<>();
 
     public IndexStoreService() {
         this.skipBackSubjects = DynamicConfigLoader.load("skip_backup.properties", false);
         this.brokerGroup = BrokerConfig.getBrokerName();
         this.indexDbDao = new IndexDbDao();
+        this.batchSize = 1000;
     }
 
     public void appendData(MessageQueryIndex index, Consumer<MessageQueryIndex> consumer) {
@@ -50,10 +55,40 @@ public class IndexStoreService {
         }
         try {
             indexDbDao.insertIndex(subjectKey, index.getMessageId(), brokerGroup, consumerGroup, index.getCreateTime(), index.getSequence());
+            if (consumer != null) consumer.accept(lastIndex);
         } catch (Exception e) {
             LOGGER.error("消息索引插入数据库失败", e);
         }
-        if (consumer != null) consumer.accept(lastIndex);
+    }
+
+    public void appendDataBatch(MessageQueryIndex queryIndex, Consumer<MessageQueryIndex> consumer) {
+        batch.add(queryIndex);
+        lastIndex = queryIndex;
+        if (batch.size() >= batchSize) {
+            List<Object[]> list = new ArrayList<>();
+            for (MessageQueryIndex index : batch) {
+                String subject = index.getSubject();
+                String realSubject = RetrySubjectUtils.getRealSubject(subject);
+                if (skipBackup(realSubject)) {
+                    return;
+                }
+                monitorBackupIndexQps(subject);
+                String subjectKey = realSubject;
+                String consumerGroup = null;
+                if (RetrySubjectUtils.isRetrySubject(subject)) {
+                    subjectKey = RetrySubjectUtils.buildRetrySubject(realSubject);
+                    consumerGroup = RetrySubjectUtils.getConsumerGroup(subject);
+                }
+                list.add(new Object[]{subjectKey, index.getMessageId(), brokerGroup, consumerGroup, index.getCreateTime(), index.getSequence()});
+            }
+            try {
+                indexDbDao.insertBatchIndex(list);
+                batch.clear();
+                if (consumer != null) consumer.accept(lastIndex);
+            } catch (Exception e) {
+                LOGGER.error("消息索引批量插入数据库失败", e);
+            }
+        }
     }
 
     private boolean skipBackup(String subject) {
